@@ -79,9 +79,9 @@ export class AIService {
       throw error;
     }
   }
-
+  
   /**
-   * Generate a chat response from the configured AI provider
+   * Generate a chat response
    * @param messages Array of chat messages
    * @param options Generation options
    * @returns The AI response
@@ -109,24 +109,24 @@ export class AIService {
       throw error;
     }
   }
-
+  
   /**
-   * Generate text with image analysis from the configured AI provider
-   * @param prompt The text prompt
+   * Generate text with image analysis capabilities
+   * @param prompt Text prompt
    * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
    * @param options Generation options
    * @returns The AI response
    */
   async generateTextWithImage(
-    prompt: string,
-    imageData: string,
+    prompt: string, 
+    imageData: string, 
     mimeType: string,
     options: AIOptions = {}
   ): Promise<AIResponse> {
     try {
       // Get model name based on provider
-      const modelName = this.getVisionModelName();
+      const modelName = this.getModelName(true);
       
       // Generate text with image using adapter
       const text = await this.adapter.generateTextWithImage(
@@ -151,42 +151,32 @@ export class AIService {
       throw error;
     }
   }
-
+  
   /**
    * Get the model name based on the provider
+   * @param visionCapable Whether to get a vision-capable model
    * @returns The model name
    */
-  private getModelName(): string {
+  private getModelName(visionCapable = false): string {
     switch (this.provider) {
       case 'GEMINI':
-        return Config.ai.gemini.modelName;
+        return visionCapable 
+          ? Config.ai.gemini.modelName.includes('vision')
+            ? Config.ai.gemini.modelName
+            : 'gemini-2.5-pro-vision'
+          : Config.ai.gemini.modelName;
       case 'ANTHROPIC':
-        return Config.ai.anthropic.modelName;
+        return visionCapable
+          ? Config.ai.anthropic.modelName.includes('3')
+            ? Config.ai.anthropic.modelName
+            : 'claude-3-5-sonnet-20241022'
+          : Config.ai.anthropic.modelName;
       case 'OPENAI':
-        return Config.ai.openai.modelName;
-      default:
-        return 'unknown';
-    }
-  }
-
-  /**
-   * Get the vision model name based on the provider
-   * @returns The vision model name
-   */
-  private getVisionModelName(): string {
-    switch (this.provider) {
-      case 'GEMINI':
-        return Config.ai.gemini.modelName.includes('vision')
-          ? Config.ai.gemini.modelName
-          : 'gemini-2.5-pro-vision';
-      case 'ANTHROPIC':
-        return Config.ai.anthropic.modelName.includes('3')
-          ? Config.ai.anthropic.modelName
-          : 'claude-3-5-sonnet-20241022';
-      case 'OPENAI':
-        return Config.ai.openai.modelName.includes('vision')
-          ? Config.ai.openai.modelName
-          : 'gpt-4o';
+        return visionCapable
+          ? Config.ai.openai.modelName.includes('vision')
+            ? Config.ai.openai.modelName
+            : 'gpt-4o'
+          : Config.ai.openai.modelName;
       default:
         return 'unknown';
     }
