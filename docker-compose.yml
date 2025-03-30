@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  browser-use-claude-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: browser-use-claude-mcp
+    restart: unless-stopped
+    ports:
+      - "9222:9222"  # Chrome debugging port
+    environment:
+      - MCP_MODEL_PROVIDER=${MCP_MODEL_PROVIDER:-GEMINI}
+      - GOOGLE_API_KEY=${GOOGLE_API_KEY:-}
+      - GEMINI_MODEL_NAME=${GEMINI_MODEL_NAME:-gemini-2.5-pro}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
+      - ANTHROPIC_MODEL_NAME=${ANTHROPIC_MODEL_NAME:-claude-3-5-sonnet-20241022}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - OPENAI_MODEL_NAME=${OPENAI_MODEL_NAME:-gpt-4o}
+      - CHROME_PATH=/usr/bin/google-chrome-stable
+      - CHROME_DEBUGGING_PORT=9222
+      - CHROME_DEBUGGING_HOST=localhost
+      - CHROME_PERSISTENT_SESSION=false
+      - BROWSER_HEADLESS=true
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+    volumes:
+      - chrome-data:/tmp/chrome-data
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 1G
+    # Use SYS_ADMIN capability for Chrome in headless mode
+    cap_add:
+      - SYS_ADMIN
+    security_opt:
+      - seccomp:unconfined  # Needed for Chrome
+
+volumes:
+  chrome-data:
+    driver: local
