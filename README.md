@@ -1,46 +1,29 @@
 # Browser-use-claude-mcp
 
-A browser automation MCP server for AI models like Claude and Gemini 2.5, enabling web browsing capabilities through natural language.
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3-blue)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-green)](https://nodejs.org/)
 
-## Overview
+A browser automation MCP server for AI models like Claude, Gemini 2.5, and OpenAI, enabling web browsing capabilities through natural language.
 
-This project implements a Model Context Protocol (MCP) server that provides browser automation capabilities to AI models. It allows AI assistants to browse the web, interact with websites, and extract information using natural language commands.
+## 🌟 Features
 
-Key features:
-- 🌐 Full browser automation (navigation, form filling, clicking, etc.)
-- 🔍 Web search capabilities
-- 📸 Screenshot capture for visual understanding
-- 🤖 Multiple AI model support (Gemini 2.5, Claude, OpenAI)
-- 🚀 Easy integration with any MCP-compatible client
+- 🌐 **Full Browser Automation**: Navigate websites, click elements, fill forms, and extract content
+- 🔍 **Web Search**: Perform searches and analyze results
+- 🤖 **Multiple AI Providers**: Support for Google Gemini 2.5, Anthropic Claude, and OpenAI
+- 🖼️ **Screenshot Capture**: Capture and analyze webpage screenshots
+- 🧩 **MCP Standard**: Fully compatible with the Model Context Protocol for AI agents
+- 🔌 **Easy Integration**: Works with Claude Desktop, Cursor, and other MCP clients
 
-## Gemini 2.5 Integration
-
-This MCP server provides specialized support for Google's Gemini 2.5 AI models, including:
-
-- Optimized integration with Gemini 2.5 Pro and Gemini 2.5 Pro Vision
-- Support for multimodal content (text + images)
-- Structured content extraction and processing
-- Session-based browsing for multi-turn interactions
-
-To use Gemini 2.5 with this MCP server:
-
-1. Obtain a Google API key with access to Gemini models
-2. Configure the server with your API key and model preferences
-3. Connect your MCP client (Claude Desktop, etc.) to the server
-
-See the [examples/gemini-browser-example.js](examples/gemini-browser-example.js) file for a complete usage example.
-
-## Installation
-
-See [INSTALL.md](INSTALL.md) for detailed installation instructions.
+## ⚡ Quick Start
 
 ### Prerequisites
 
 - Node.js 18 or higher
-- Chrome/Chromium browser installed
-- API key from one of the supported AI providers (Google Gemini, Anthropic Claude, or OpenAI)
+- Chrome/Chromium browser
+- API key from one of the supported AI providers
 
-### Quick Start
+### Installation
 
 ```bash
 # Clone the repository
@@ -52,111 +35,154 @@ npm install
 
 # Build the project
 npm run build
-
-# Configure environment
-cp .env.example .env
-# Edit .env with your API keys and preferences
-
-# Start the server
-npm start
 ```
 
-## Usage
+### Configuration
 
-### With Claude Desktop
+1. Create a `.env` file by copying the example:
+   ```bash
+   cp .env.example .env
+   ```
 
-1. Add the MCP server to your Claude Desktop configuration:
+2. Configure your preferred AI provider in the `.env` file:
+   ```
+   MCP_MODEL_PROVIDER=GEMINI
+   GOOGLE_API_KEY=your_google_api_key_here
+   ```
 
-**Windows**: Edit `%APPDATA%/Claude/claude_desktop_config.json`  
-**MacOS**: Edit `~/Library/Application Support/Claude/claude_desktop_config.json`
+### Integration with Claude Desktop
 
-```json
-{
-  "mcpServers": {
-    "browser-use-claude-mcp": {
-      "command": "node",
-      "args": [
-        "/path/to/Browser-use-claude-mcp/dist/index.js"
-      ],
-      "env": {
-        "CHROME_PATH": "",
-        "CHROME_USER_DATA": "",
-        "MCP_MODEL_PROVIDER": "GEMINI",
-        "GOOGLE_API_KEY": "your_google_api_key_here",
-        "GEMINI_MODEL_NAME": "gemini-2.5-pro"
-      }
-    }
-  }
-}
-```
+1. Edit the Claude Desktop configuration file:
+   - Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
 
-2. Restart Claude Desktop and you should see the browser tools available.
+2. Add the MCP server configuration:
+   ```json
+   {
+     "mcpServers": {
+       "browser-use-claude-mcp": {
+         "command": "node",
+         "args": [
+           "/path/to/dist/index.js"
+         ],
+         "env": {
+           "MCP_MODEL_PROVIDER": "GEMINI",
+           "GOOGLE_API_KEY": "your_google_api_key_here"
+         }
+       }
+     }
+   }
+   ```
 
-### Supported AI Providers
+3. Restart Claude Desktop.
 
-The server supports the following AI providers:
+## 🛠️ Available Tools
 
-- **Google Gemini** (Default)
-  - Models: gemini-2.5-pro, gemini-2.5-pro-vision
-  - Environment variables: `GOOGLE_API_KEY`, `GEMINI_MODEL_NAME`
+The MCP server provides the following tools for browser automation:
 
-- **Anthropic Claude**
-  - Models: claude-3-5-sonnet-20241022, etc.
-  - Environment variables: `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL_NAME`
+### `browse_webpage`
 
-- **OpenAI**
-  - Models: gpt-4o, etc.
-  - Environment variables: `OPENAI_API_KEY`, `OPENAI_MODEL_NAME`
+Navigate to a webpage and extract its content.
 
-You can select the provider using the `MCP_MODEL_PROVIDER` environment variable.
-
-## Available Tools
-
-The MCP server provides the following tools:
-
-- `browse_webpage`: Navigate to a URL and interact with the page
-- `search_web`: Perform a web search and return results
-- `take_screenshot`: Capture a screenshot of the current page
-- `click_element`: Click on an element identified by text or selector
-- `fill_form`: Fill out form fields on a webpage
-- `extract_content`: Extract specific content from a webpage
-
-## Examples
-
-Here are some examples of how to use the tools from an MCP client:
-
-```
-# Browse to a webpage
+```js
 browse_webpage(url="https://example.com")
+```
 
-# Perform a web search
-search_web(query="best programming languages 2025")
+### `search_web`
 
-# Fill out a form
-fill_form(url="https://example.com/contact", fields={
-  "name": "John Doe",
+Perform a web search and get results.
+
+```js
+search_web(query="the meaning of life", numResults=5)
+```
+
+### `take_screenshot`
+
+Capture a screenshot of the current webpage.
+
+```js
+take_screenshot(fullPage=true)
+```
+
+### `click_element`
+
+Click on an element identified by text or selector.
+
+```js
+click_element(text="Sign Up", waitForNavigation=true)
+```
+
+### `fill_form`
+
+Fill out form fields on a webpage.
+
+```js
+fill_form(fields={
+  "username": "john_doe",
   "email": "john@example.com",
-  "message": "Hello world!"
-})
+  "password": "secureP@ssw0rd"
+}, submit=true)
 ```
 
-## Development
+### `extract_content`
 
-```bash
-# Run in development mode
-npm run dev
+Extract specific content from a webpage.
 
-# Run tests
-npm test
-
-# Lint code
-npm run lint
+```js
+extract_content(selectors={
+  "title": "h1.page-title",
+  "price": ".product-price",
+  "description": ".product-description"
+}, extractLinks=true)
 ```
 
-## License
+## 🧩 AI Provider Support
 
-MIT
+### Google Gemini 2.5
 
-## Credits
+Optimized for Gemini 2.5, with support for text generation and vision capabilities.
 
-This project builds upon the work of [browser-use](https://github.com/browser-use/browser-use) and other MCP server implementations.
+### Anthropic Claude
+
+Full support for Claude models, with multimodal capabilities for image analysis.
+
+### OpenAI
+
+Support for GPT models, including vision capabilities for image analysis.
+
+## 🔄 Session Management
+
+The server maintains browser sessions across requests, allowing for multi-step interactions with websites. You can specify a `sessionId` in your requests to continue using an existing browser session:
+
+```js
+// First request
+const result1 = await browse_webpage(url="https://example.com");
+const sessionId = result1.sessionId;
+
+// Follow-up request using the same session
+const result2 = await click_element(text="Login", sessionId=sessionId);
+```
+
+## 📚 Documentation
+
+For detailed installation and configuration instructions, see [INSTALL.md](./INSTALL.md).
+
+## 🤝 Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+## 🙏 Acknowledgments
+
+- [browser-use](https://github.com/browser-use/browser-use) - For inspiration and concepts
+- [Model Context Protocol](https://modelcontextprotocol.io/) - For the MCP standard
+- [Puppeteer](https://pptr.dev/) - For browser automation capabilities
