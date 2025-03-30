@@ -81,7 +81,37 @@ export class AIService {
   }
 
   /**
-   * Generate text with image analysis
+   * Generate a chat response from the configured AI provider
+   * @param messages Array of chat messages
+   * @param options Generation options
+   * @returns The AI response
+   */
+  async generateChatResponse(messages: ChatMessage[], options: AIOptions = {}): Promise<AIResponse> {
+    try {
+      // Get model name based on provider
+      const modelName = this.getModelName();
+      
+      // Generate chat response using adapter
+      const text = await this.adapter.generateChatResponse(messages, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
+      });
+      
+      return {
+        text,
+        model: modelName,
+        provider: this.provider,
+      };
+    } catch (error) {
+      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate text with image analysis from the configured AI provider
    * @param prompt The text prompt
    * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
@@ -96,7 +126,7 @@ export class AIService {
   ): Promise<AIResponse> {
     try {
       // Get model name based on provider
-      const modelName = this.getModelName();
+      const modelName = this.getVisionModelName();
       
       // Generate text with image using adapter
       const text = await this.adapter.generateTextWithImage(
@@ -123,42 +153,6 @@ export class AIService {
   }
 
   /**
-   * Generate a chat response
-   * @param messages Chat messages
-   * @param options Generation options
-   * @returns The AI response
-   */
-  async generateChatResponse(
-    messages: ChatMessage[],
-    options: AIOptions = {}
-  ): Promise<AIResponse> {
-    try {
-      // Get model name based on provider
-      const modelName = this.getModelName();
-      
-      // Generate chat response using adapter
-      const text = await this.adapter.generateChatResponse(
-        messages,
-        {
-          maxTokens: options.maxTokens,
-          temperature: options.temperature,
-          topP: options.topP,
-          topK: options.topK,
-        }
-      );
-      
-      return {
-        text,
-        model: modelName,
-        provider: this.provider,
-      };
-    } catch (error) {
-      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  }
-
-  /**
    * Get the model name based on the provider
    * @returns The model name
    */
@@ -170,6 +164,29 @@ export class AIService {
         return Config.ai.anthropic.modelName;
       case 'OPENAI':
         return Config.ai.openai.modelName;
+      default:
+        return 'unknown';
+    }
+  }
+
+  /**
+   * Get the vision model name based on the provider
+   * @returns The vision model name
+   */
+  private getVisionModelName(): string {
+    switch (this.provider) {
+      case 'GEMINI':
+        return Config.ai.gemini.modelName.includes('vision')
+          ? Config.ai.gemini.modelName
+          : 'gemini-2.5-pro-vision';
+      case 'ANTHROPIC':
+        return Config.ai.anthropic.modelName.includes('3')
+          ? Config.ai.anthropic.modelName
+          : 'claude-3-5-sonnet-20241022';
+      case 'OPENAI':
+        return Config.ai.openai.modelName.includes('vision')
+          ? Config.ai.openai.modelName
+          : 'gpt-4o';
       default:
         return 'unknown';
     }
