@@ -1,18 +1,22 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import { Config } from '../config/index.js';
 import { setupLogger, createContextLogger } from '../utils/logger.js';
-import fetch from 'node-fetch';
+import { AIAdapter, AIAdapterFactory } from './adapters/index.js';
 
 // Logger
 const logger = createContextLogger(setupLogger(), 'AIService');
 
-// Types
+/**
+ * Type for AI response
+ */
 export interface AIResponse {
   text: string;
   model: string;
   provider: string;
 }
 
+/**
+ * Type for general AI options
+ */
 export interface AIOptions {
   maxTokens?: number;
   temperature?: number;
@@ -20,17 +24,30 @@ export interface AIOptions {
   topK?: number;
 }
 
-export type AIProvider = 'GEMINI' | 'ANTHROPIC' | 'OPENAI';
+/**
+ * Type for chat message
+ */
+export interface ChatMessage {
+  role: string;
+  content: string;
+}
 
 /**
  * Service that handles interactions with AI providers
  */
 export class AIService {
-  private provider: AIProvider;
+  private adapter: AIAdapter;
+  private provider: string;
 
+  /**
+   * Constructor
+   */
   constructor() {
-    this.provider = Config.ai.provider as AIProvider;
+    this.provider = Config.ai.provider;
     logger.info(`Initializing AI service with provider: ${this.provider}`);
+    
+    // Create adapter using factory
+    this.adapter = AIAdapterFactory.createAdapter();
   }
 
   /**
@@ -41,16 +58,22 @@ export class AIService {
    */
   async generateText(prompt: string, options: AIOptions = {}): Promise<AIResponse> {
     try {
-      switch (this.provider) {
-        case 'GEMINI':
-          return await this.generateWithGemini(prompt, options);
-        case 'ANTHROPIC':
-          return await this.generateWithAnthropic(prompt, options);
-        case 'OPENAI':
-          return await this.generateWithOpenAI(prompt, options);
-        default:
-          throw new Error(`Unsupported AI provider: ${this.provider}`);
-      }
+      // Get model name based on provider
+      const modelName = this.getModelName();
+      
+      // Generate text using adapter
+      const text = await this.adapter.generateText(prompt, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
+      });
+      
+      return {
+        text,
+        model: modelName,
+        provider: this.provider,
+      };
     } catch (error) {
       logger.error(`Error generating text: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -58,144 +81,99 @@ export class AIService {
   }
 
   /**
-   * Generate text using Google's Gemini API
-   * @param prompt The text prompt
+   * Generate text with image analysis capabilities
+   * @param prompt Text prompt
+   * @param imageData Base64 encoded image data
+   * @param mimeType Image MIME type
    * @param options Generation options
    * @returns The AI response
    */
-  private async generateWithGemini(
+  async generateTextWithImage(
     prompt: string, 
-    options: AIOptions
+    imageData: string, 
+    mimeType: string, 
+    options: AIOptions = {}
   ): Promise<AIResponse> {
     try {
-      const apiKey = Config.ai.gemini.apiKey;
-      const modelName = Config.ai.gemini.modelName;
+      // Get model name based on provider
+      const modelName = this.getModelName(true); // true for vision models
       
-      const genAI = new GoogleGenerativeAI(apiKey);
-      const model = genAI.getGenerativeModel({ model: modelName });
-      
-      const generationConfig = {
-        temperature: options.temperature ?? 0.7,
-        topK: options.topK ?? 40,
-        topP: options.topP ?? 0.95,
-        maxOutputTokens: options.maxTokens ?? 8192,
-      };
-      
-      const result = await model.generateContent({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig,
+      // Generate text using adapter
+      const text = await this.adapter.generateTextWithImage(prompt, imageData, mimeType, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
       });
-      
-      const response = result.response;
-      const text = response.text();
       
       return {
         text,
         model: modelName,
-        provider: 'GEMINI',
+        provider: this.provider,
       };
     } catch (error) {
-      logger.error(`Error with Gemini: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`Error generating text with image: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
 
   /**
-   * Generate text using Anthropic's Claude API
-   * @param prompt The text prompt
+   * Generate a chat response
+   * @param messages Array of message objects with role and content
    * @param options Generation options
    * @returns The AI response
    */
-  private async generateWithAnthropic(
-    prompt: string, 
-    options: AIOptions
-  ): Promise<AIResponse> {
+  async generateChatResponse(messages: ChatMessage[], options: AIOptions = {}): Promise<AIResponse> {
     try {
-      const apiKey = Config.ai.anthropic.apiKey;
-      const modelName = Config.ai.anthropic.modelName;
+      // Get model name based on provider
+      const modelName = this.getModelName();
       
-      const response = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages: [
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: options.maxTokens ?? 4096,
-          temperature: options.temperature ?? 0.7,
-          top_p: options.topP ?? 0.95,
-        }),
+      // Generate response using adapter
+      const text = await this.adapter.generateChatResponse(messages, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
       });
       
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Anthropic API error (${response.status}): ${errorText}`);
-      }
-      
-      const result = await response.json() as any;
-      
       return {
-        text: result.content?.[0]?.text || '',
+        text,
         model: modelName,
-        provider: 'ANTHROPIC',
+        provider: this.provider,
       };
     } catch (error) {
-      logger.error(`Error with Anthropic: ${error instanceof Error ? error.message : String(error)}`);
+      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
     }
   }
 
   /**
-   * Generate text using OpenAI's API
-   * @param prompt The text prompt
-   * @param options Generation options
-   * @returns The AI response
+   * Get the model name based on the configured provider
+   * @param isVision Whether to get a vision-capable model
+   * @returns The model name
    */
-  private async generateWithOpenAI(
-    prompt: string, 
-    options: AIOptions
-  ): Promise<AIResponse> {
-    try {
-      const apiKey = Config.ai.openai.apiKey;
-      const modelName = Config.ai.openai.modelName;
-      
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
-        },
-        body: JSON.stringify({
-          model: modelName,
-          messages: [
-            { role: 'user', content: prompt },
-          ],
-          max_tokens: options.maxTokens ?? 4096,
-          temperature: options.temperature ?? 0.7,
-          top_p: options.topP ?? 1,
-        }),
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`OpenAI API error (${response.status}): ${errorText}`);
-      }
-      
-      const result = await response.json() as any;
-      
-      return {
-        text: result.choices?.[0]?.message?.content || '',
-        model: modelName,
-        provider: 'OPENAI',
-      };
-    } catch (error) {
-      logger.error(`Error with OpenAI: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+  private getModelName(isVision: boolean = false): string {
+    switch (this.provider) {
+      case 'GEMINI':
+        return isVision 
+          ? Config.ai.gemini.modelName.includes('vision') 
+              ? Config.ai.gemini.modelName 
+              : 'gemini-2.5-pro-vision'
+          : Config.ai.gemini.modelName;
+      case 'ANTHROPIC':
+        return isVision 
+          ? Config.ai.anthropic.modelName.includes('3') 
+              ? Config.ai.anthropic.modelName 
+              : 'claude-3-5-sonnet-20241022'
+          : Config.ai.anthropic.modelName;
+      case 'OPENAI':
+        return isVision 
+          ? Config.ai.openai.modelName.includes('vision') 
+              ? Config.ai.openai.modelName 
+              : 'gpt-4o'
+          : Config.ai.openai.modelName;
+      default:
+        return 'unknown';
     }
   }
 }
