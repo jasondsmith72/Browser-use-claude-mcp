@@ -79,14 +79,54 @@ export class AIService {
       throw error;
     }
   }
-
+  
   /**
-   * Generate a chat response from the configured AI provider
-   * @param messages Array of chat messages
+   * Generate text with image analysis capabilities
+   * @param prompt Text prompt
+   * @param imageData Base64 encoded image data
+   * @param mimeType Image MIME type
    * @param options Generation options
    * @returns The AI response
    */
-  async generateChatResponse(messages: ChatMessage[], options: AIOptions = {}): Promise<AIResponse> {
+  async generateTextWithImage(
+    prompt: string, 
+    imageData: string, 
+    mimeType: string,
+    options: AIOptions = {}
+  ): Promise<AIResponse> {
+    try {
+      // Get model name based on provider - vision models may be different
+      const modelName = this.getVisionModelName();
+      
+      // Generate text using adapter
+      const text = await this.adapter.generateTextWithImage(prompt, imageData, mimeType, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
+      });
+      
+      return {
+        text,
+        model: modelName,
+        provider: this.provider,
+      };
+    } catch (error) {
+      logger.error(`Error generating text with image: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+  
+  /**
+   * Generate a chat response
+   * @param messages Array of message objects with role and content
+   * @param options Generation options
+   * @returns The AI response
+   */
+  async generateChatResponse(
+    messages: ChatMessage[],
+    options: AIOptions = {}
+  ): Promise<AIResponse> {
     try {
       // Get model name based on provider
       const modelName = this.getModelName();
@@ -109,51 +149,9 @@ export class AIService {
       throw error;
     }
   }
-
+  
   /**
-   * Generate text with image analysis capabilities
-   * @param prompt Text prompt
-   * @param imageData Base64 encoded image data
-   * @param mimeType Image MIME type
-   * @param options Generation options
-   * @returns The AI response
-   */
-  async generateTextWithImage(
-    prompt: string, 
-    imageData: string, 
-    mimeType: string,
-    options: AIOptions = {}
-  ): Promise<AIResponse> {
-    try {
-      // Get vision model name based on provider
-      const modelName = this.getVisionModelName();
-      
-      // Generate text with image analysis using adapter
-      const text = await this.adapter.generateTextWithImage(
-        prompt,
-        imageData,
-        mimeType,
-        {
-          maxTokens: options.maxTokens,
-          temperature: options.temperature,
-          topP: options.topP,
-          topK: options.topK,
-        }
-      );
-      
-      return {
-        text,
-        model: modelName,
-        provider: this.provider,
-      };
-    } catch (error) {
-      logger.error(`Error generating text with image: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Get the model name for the configured provider
+   * Get the model name for the current provider
    * @returns The model name
    */
   private getModelName(): string {
@@ -165,32 +163,30 @@ export class AIService {
       case 'OPENAI':
         return Config.ai.openai.modelName;
       default:
-        logger.warn(`Unknown provider: ${this.provider}, defaulting to Gemini`);
-        return Config.ai.gemini.modelName;
+        throw new Error(`Unsupported AI provider: ${this.provider}`);
     }
   }
-
+  
   /**
-   * Get the vision-capable model name for the configured provider
-   * @returns The vision-capable model name
+   * Get the vision model name for the current provider
+   * @returns The vision model name
    */
   private getVisionModelName(): string {
     switch (this.provider) {
       case 'GEMINI':
-        return Config.ai.gemini.modelName.includes('vision') 
-          ? Config.ai.gemini.modelName 
-          : 'gemini-2.5-pro-vision';
+        const geminiModel = Config.ai.gemini.modelName;
+        // Check if the model is already vision-capable
+        return geminiModel.includes('vision') ? geminiModel : 'gemini-2.5-pro-vision';
       case 'ANTHROPIC':
-        return Config.ai.anthropic.modelName.includes('3') 
-          ? Config.ai.anthropic.modelName 
-          : 'claude-3-5-sonnet-20241022';
+        const anthropicModel = Config.ai.anthropic.modelName;
+        // Claude 3 models support vision
+        return anthropicModel.includes('3') ? anthropicModel : 'claude-3-5-sonnet-20241022';
       case 'OPENAI':
-        return Config.ai.openai.modelName.includes('vision') 
-          ? Config.ai.openai.modelName 
-          : 'gpt-4o';
+        const openaiModel = Config.ai.openai.modelName;
+        // Check if the model is already vision-capable
+        return openaiModel.includes('vision') ? openaiModel : 'gpt-4o';
       default:
-        logger.warn(`Unknown provider: ${this.provider}, defaulting to Gemini Vision`);
-        return 'gemini-2.5-pro-vision';
+        throw new Error(`Unsupported AI provider: ${this.provider}`);
     }
   }
 }
