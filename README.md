@@ -11,7 +11,16 @@ Key features:
 - 🔍 Web search capabilities
 - 📸 Screenshot capture for visual understanding
 - 🤖 Multiple AI model support (Gemini 2.5, Claude, OpenAI)
+- 🧠 Advanced webpage analysis with AI vision capabilities
 - 🚀 Easy integration with any MCP-compatible client
+
+## Gemini 2.5 Integration
+
+This MCP server includes special integration with Google's Gemini 2.5 model. Key features:
+
+- **Vision-Based Webpage Analysis**: Uses Gemini 2.5's vision capabilities to analyze webpages from both HTML content and visual screenshots
+- **Advanced Question Answering**: Answer specific questions about webpage content using AI analysis
+- **Multi-Modal Processing**: Combines textual and visual understanding for better browsing assistance
 
 ## Installation
 
@@ -58,6 +67,8 @@ cp .env.example .env
    - Add your API key for the chosen provider
    - Configure browser settings if needed
 
+For detailed setup instructions, see [INSTALL.md](INSTALL.md).
+
 ## Usage
 
 ### With Claude Desktop
@@ -75,8 +86,8 @@ cp .env.example .env
       "env": {
         "CHROME_PATH": "",
         "CHROME_USER_DATA": "",
-        "ANTHROPIC_API_KEY": "your_api_key_here",
-        "MCP_MODEL_PROVIDER": "ANTHROPIC"
+        "MCP_MODEL_PROVIDER": "GEMINI",
+        "GOOGLE_API_KEY": "your_api_key_here"
       }
     }
   }
@@ -96,9 +107,10 @@ The MCP server provides the following tools:
 - `browse_webpage`: Navigate to a URL and interact with the page
 - `search_web`: Perform a web search and return results
 - `take_screenshot`: Capture a screenshot of the current page
-- `fill_form`: Fill out form fields on a webpage
 - `click_element`: Click on an element identified by text or selector
+- `fill_form`: Fill out form fields on a webpage
 - `extract_content`: Extract specific content from a webpage
+- `analyze_webpage`: AI-powered analysis of webpage content (Gemini 2.5 feature)
 
 ## Examples
 
@@ -117,6 +129,13 @@ fill_form(url="https://example.com/contact", fields={
   "email": "john@example.com",
   "message": "Hello world!"
 })
+
+# Analyze a webpage with Gemini 2.5
+analyze_webpage(
+  url="https://example.com/product",
+  question="What are the key features of this product?",
+  extractScreenshot=true
+)
 ```
 
 ## Development
@@ -131,6 +150,16 @@ npm test
 # Lint code
 npm run lint
 ```
+
+## AI Provider Support
+
+This MCP server supports multiple AI providers:
+
+- **Google Gemini**: Gemini 2.5 Pro, Gemini 2.5 Pro Vision
+- **Anthropic Claude**: Claude 3.5 Sonnet
+- **OpenAI**: GPT-4o
+
+You can switch between providers by setting the `MCP_MODEL_PROVIDER` environment variable and providing the appropriate API key.
 
 ## License
 
