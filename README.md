@@ -11,16 +11,33 @@ Key features:
 - 🔍 Web search capabilities
 - 📸 Screenshot capture for visual understanding
 - 🤖 Multiple AI model support (Gemini 2.5, Claude, OpenAI)
-- 🧠 Advanced webpage analysis with AI vision capabilities
 - 🚀 Easy integration with any MCP-compatible client
 
 ## Gemini 2.5 Integration
 
-This MCP server includes special integration with Google's Gemini 2.5 model. Key features:
+This project features robust support for Google's Gemini 2.5 models:
 
-- **Vision-Based Webpage Analysis**: Uses Gemini 2.5's vision capabilities to analyze webpages from both HTML content and visual screenshots
-- **Advanced Question Answering**: Answer specific questions about webpage content using AI analysis
-- **Multi-Modal Processing**: Combines textual and visual understanding for better browsing assistance
+- **Gemini 2.5 Pro**: Provides advanced reasoning and text processing capabilities
+- **Gemini 2.5 Pro Vision**: Adds image analysis for screenshot understanding and visual interaction
+- **Custom API Integration**: Optimized adapter for the latest Google AI API features
+
+Using Gemini 2.5 with this MCP server enables:
+
+1. **Visual Analysis**: Analyze webpage screenshots to understand layout, content, and interactive elements
+2. **Intelligent Navigation**: Generate optimized search queries and navigation strategies
+3. **Advanced Form Filling**: Intelligently determine how to fill form fields based on context
+4. **Structured Data Extraction**: Extract structured data from unstructured web content
+
+To use the Gemini 2.5 integration:
+
+1. Obtain a Google AI API key from the [Google AI Studio](https://makersuite.google.com/app/apikey)
+2. Configure the `.env` file with:
+   ```
+   MCP_MODEL_PROVIDER=GEMINI
+   GOOGLE_API_KEY=your_google_api_key
+   GEMINI_MODEL_NAME=gemini-2.5-pro
+   ```
+3. The AI integration helpers will automatically use Gemini's optimized capabilities
 
 ## Installation
 
@@ -29,16 +46,6 @@ This MCP server includes special integration with Google's Gemini 2.5 model. Key
 - Node.js 18 or higher
 - Chrome/Chromium browser installed
 - API key from one of the supported AI providers (Google Gemini, Anthropic Claude, or OpenAI)
-
-### Install from NPM
-
-```bash
-# Install globally
-npm install -g browser-use-claude-mcp
-
-# Or install locally in your project
-npm install browser-use-claude-mcp
-```
 
 ### Install from Source
 
@@ -67,7 +74,7 @@ cp .env.example .env
    - Add your API key for the chosen provider
    - Configure browser settings if needed
 
-For detailed setup instructions, see [INSTALL.md](INSTALL.md).
+For a complete configuration guide, see [INSTALL.md](INSTALL.md).
 
 ## Usage
 
@@ -82,12 +89,16 @@ For detailed setup instructions, see [INSTALL.md](INSTALL.md).
 {
   "mcpServers": {
     "browser-use-claude-mcp": {
-      "command": "browser-use-claude-mcp",
+      "command": "node",
+      "args": [
+        "/path/to/Browser-use-claude-mcp/dist/index.js"
+      ],
       "env": {
         "CHROME_PATH": "",
         "CHROME_USER_DATA": "",
         "MCP_MODEL_PROVIDER": "GEMINI",
-        "GOOGLE_API_KEY": "your_api_key_here"
+        "GOOGLE_API_KEY": "your_api_key_here",
+        "GEMINI_MODEL_NAME": "gemini-2.5-pro"
       }
     }
   }
@@ -110,7 +121,6 @@ The MCP server provides the following tools:
 - `click_element`: Click on an element identified by text or selector
 - `fill_form`: Fill out form fields on a webpage
 - `extract_content`: Extract specific content from a webpage
-- `analyze_webpage`: AI-powered analysis of webpage content (Gemini 2.5 feature)
 
 ## Examples
 
@@ -129,13 +139,6 @@ fill_form(url="https://example.com/contact", fields={
   "email": "john@example.com",
   "message": "Hello world!"
 })
-
-# Analyze a webpage with Gemini 2.5
-analyze_webpage(
-  url="https://example.com/product",
-  question="What are the key features of this product?",
-  extractScreenshot=true
-)
 ```
 
 ## Development
@@ -150,16 +153,6 @@ npm test
 # Lint code
 npm run lint
 ```
-
-## AI Provider Support
-
-This MCP server supports multiple AI providers:
-
-- **Google Gemini**: Gemini 2.5 Pro, Gemini 2.5 Pro Vision
-- **Anthropic Claude**: Claude 3.5 Sonnet
-- **OpenAI**: GPT-4o
-
-You can switch between providers by setting the `MCP_MODEL_PROVIDER` environment variable and providing the appropriate API key.
 
 ## License
 
