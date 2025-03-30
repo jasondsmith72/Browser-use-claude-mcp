@@ -81,54 +81,21 @@ export class AIService {
   }
 
   /**
-   * Generate a chat response from the configured AI provider
-   * @param messages Array of chat messages
-   * @param options Generation options
-   * @returns The AI response
-   */
-  async generateChatResponse(messages: ChatMessage[], options: AIOptions = {}): Promise<AIResponse> {
-    try {
-      // Get model name based on provider
-      const modelName = this.getModelName();
-      
-      // Map messages to the format expected by the adapter
-      const mappedMessages = this.mapMessagesToProviderFormat(messages);
-      
-      // Generate chat response using adapter
-      const text = await this.adapter.generateChatResponse(mappedMessages, {
-        maxTokens: options.maxTokens,
-        temperature: options.temperature,
-        topP: options.topP,
-        topK: options.topK,
-      });
-      
-      return {
-        text,
-        model: modelName,
-        provider: this.provider,
-      };
-    } catch (error) {
-      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  }
-
-  /**
    * Generate text with image analysis capabilities
    * @param prompt Text prompt
    * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
    * @param options Generation options
-   * @returns The AI response
+   * @returns AI response
    */
   async generateTextWithImage(
-    prompt: string, 
-    imageData: string, 
+    prompt: string,
+    imageData: string,
     mimeType: string,
     options: AIOptions = {}
   ): Promise<AIResponse> {
     try {
-      // Get model name based on provider (vision model if available)
+      // Get model name based on provider
       const modelName = this.getVisionModelName();
       
       // Generate text using adapter
@@ -149,10 +116,43 @@ export class AIService {
       throw error;
     }
   }
-
+  
+  /**
+   * Generate a chat response
+   * @param messages Array of chat messages
+   * @param options Generation options
+   * @returns AI response
+   */
+  async generateChatResponse(
+    messages: ChatMessage[],
+    options: AIOptions = {}
+  ): Promise<AIResponse> {
+    try {
+      // Get model name based on provider
+      const modelName = this.getModelName();
+      
+      // Generate chat response using adapter
+      const text = await this.adapter.generateChatResponse(messages, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
+      });
+      
+      return {
+        text,
+        model: modelName,
+        provider: this.provider,
+      };
+    } catch (error) {
+      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+  
   /**
    * Get the appropriate model name based on the provider
-   * @returns The model name
+   * @returns Model name for the configured provider
    */
   private getModelName(): string {
     switch (this.provider) {
@@ -166,10 +166,10 @@ export class AIService {
         return 'unknown';
     }
   }
-
+  
   /**
    * Get the appropriate vision model name based on the provider
-   * @returns The vision model name
+   * @returns Vision model name for the configured provider
    */
   private getVisionModelName(): string {
     switch (this.provider) {
@@ -178,39 +178,15 @@ export class AIService {
           ? Config.ai.gemini.modelName 
           : 'gemini-2.5-pro-vision';
       case 'ANTHROPIC':
-        return Config.ai.anthropic.modelName.includes('3')
-          ? Config.ai.anthropic.modelName
+        return Config.ai.anthropic.modelName.includes('3') 
+          ? Config.ai.anthropic.modelName 
           : 'claude-3-5-sonnet-20241022';
       case 'OPENAI':
-        return Config.ai.openai.modelName.includes('vision')
-          ? Config.ai.openai.modelName
+        return Config.ai.openai.modelName.includes('vision') 
+          ? Config.ai.openai.modelName 
           : 'gpt-4o';
       default:
         return 'unknown';
-    }
-  }
-
-  /**
-   * Map generic messages to the format expected by the specific provider
-   * @param messages The generic messages
-   * @returns The provider-specific messages
-   */
-  private mapMessagesToProviderFormat(messages: ChatMessage[]): any[] {
-    switch (this.provider) {
-      case 'GEMINI':
-        return messages.map(msg => ({
-          role: msg.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: msg.content }],
-        }));
-      case 'ANTHROPIC':
-        return messages.map(msg => ({
-          role: msg.role === 'system' ? 'user' : msg.role,
-          content: msg.content,
-        }));
-      case 'OPENAI':
-        return messages;
-      default:
-        return messages;
     }
   }
 }
