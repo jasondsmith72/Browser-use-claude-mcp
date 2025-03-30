@@ -86,7 +86,7 @@ export class AIService {
    * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
    * @param options Generation options
-   * @returns The AI response
+   * @returns AI response
    */
   async generateTextWithImage(
     prompt: string,
@@ -96,20 +96,15 @@ export class AIService {
   ): Promise<AIResponse> {
     try {
       // Get model name based on provider
-      const modelName = this.getModelName(true);
+      const modelName = this.getModelName();
       
       // Generate text using adapter
-      const text = await this.adapter.generateTextWithImage(
-        prompt,
-        imageData,
-        mimeType,
-        {
-          maxTokens: options.maxTokens,
-          temperature: options.temperature,
-          topP: options.topP,
-          topK: options.topK,
-        }
-      );
+      const text = await this.adapter.generateTextWithImage(prompt, imageData, mimeType, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
+      });
       
       return {
         text,
@@ -126,7 +121,7 @@ export class AIService {
    * Generate a chat response
    * @param messages Array of chat messages
    * @param options Generation options
-   * @returns The AI response
+   * @returns AI response
    */
   async generateChatResponse(
     messages: ChatMessage[],
@@ -137,15 +132,12 @@ export class AIService {
       const modelName = this.getModelName();
       
       // Generate text using adapter
-      const text = await this.adapter.generateChatResponse(
-        messages,
-        {
-          maxTokens: options.maxTokens,
-          temperature: options.temperature,
-          topP: options.topP,
-          topK: options.topK,
-        }
-      );
+      const text = await this.adapter.generateChatResponse(messages, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
+      });
       
       return {
         text,
@@ -159,26 +151,17 @@ export class AIService {
   }
 
   /**
-   * Get the appropriate model name based on provider
-   * @param vision Whether to get a vision-capable model name
+   * Get the model name based on the provider
    * @returns The model name
    */
-  private getModelName(vision: boolean = false): string {
+  private getModelName(): string {
     switch (this.provider) {
       case 'GEMINI':
-        return vision 
-          ? Config.ai.gemini.modelName.includes('vision') 
-            ? Config.ai.gemini.modelName 
-            : 'gemini-2.5-pro-vision'
-          : Config.ai.gemini.modelName;
+        return Config.ai.gemini.modelName;
       case 'ANTHROPIC':
         return Config.ai.anthropic.modelName;
       case 'OPENAI':
-        return vision
-          ? Config.ai.openai.modelName.includes('vision')
-            ? Config.ai.openai.modelName
-            : 'gpt-4o'
-          : Config.ai.openai.modelName;
+        return Config.ai.openai.modelName;
       default:
         return 'unknown';
     }
