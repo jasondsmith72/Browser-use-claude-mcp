@@ -6,6 +6,7 @@ import { registerTakeScreenshotTool } from './takeScreenshot.js';
 import { registerClickElementTool } from './clickElement.js';
 import { registerFillFormTool } from './fillForm.js';
 import { registerExtractContentTool } from './extractContent.js';
+import { registerAnalyzeWebpageTool } from './analyzeWebpage.js';
 import { setupLogger, createContextLogger } from '../utils/logger.js';
 
 // Logger
@@ -26,6 +27,7 @@ export function setupTools(server: Server, browserManager: BrowserManager): void
   registerClickElementTool(server, browserManager);
   registerFillFormTool(server, browserManager);
   registerExtractContentTool(server, browserManager);
+  registerAnalyzeWebpageTool(server, browserManager);
   
   logger.info('Tools setup complete');
 }
