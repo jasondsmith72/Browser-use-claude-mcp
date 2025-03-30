@@ -1,0 +1,21 @@
+{
+  "mcpServers": {
+    "browser-use-claude-mcp": {
+      "command": "node",
+      "args": [
+        "dist/index.js"
+      ],
+      "env": {
+        "CHROME_PATH": "",
+        "CHROME_USER_DATA": "",
+        "CHROME_DEBUGGING_PORT": "9222",
+        "CHROME_DEBUGGING_HOST": "localhost",
+        "CHROME_PERSISTENT_SESSION": "false",
+        "BROWSER_HEADLESS": "false",
+        "MCP_MODEL_PROVIDER": "GEMINI",
+        "GOOGLE_API_KEY": "your_google_api_key_here",
+        "GEMINI_MODEL_NAME": "gemini-2.5-pro"
+      }
+    }
+  }
+}
