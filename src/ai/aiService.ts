@@ -82,7 +82,7 @@ export class AIService {
 
   /**
    * Generate a chat response
-   * @param messages Array of messages
+   * @param messages Array of chat messages
    * @param options Generation options
    * @returns The AI response
    */
@@ -113,25 +113,25 @@ export class AIService {
   /**
    * Generate text with image analysis capabilities
    * @param prompt Text prompt
-   * @param imageBase64 Base64 encoded image data
+   * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
    * @param options Generation options
    * @returns The AI response
    */
   async generateTextWithImage(
     prompt: string,
-    imageBase64: string,
+    imageData: string,
     mimeType: string,
     options: AIOptions = {}
   ): Promise<AIResponse> {
     try {
       // Get model name based on provider
-      const modelName = this.getVisionModelName();
+      const modelName = this.getModelName(true);
       
       // Generate text with image using adapter
       const text = await this.adapter.generateTextWithImage(
         prompt,
-        imageBase64,
+        imageData,
         mimeType,
         {
           maxTokens: options.maxTokens,
@@ -153,41 +153,24 @@ export class AIService {
   }
 
   /**
-   * Get the configured model name based on provider
+   * Get the appropriate model name based on provider
+   * @param vision Whether to use a vision-capable model
    * @returns The model name
    */
-  private getModelName(): string {
+  private getModelName(vision: boolean = false): string {
     switch (this.provider) {
       case 'GEMINI':
-        return Config.ai.gemini.modelName;
+        return vision
+          ? 'gemini-2.5-pro-vision'
+          : Config.ai.gemini.modelName;
       case 'ANTHROPIC':
-        return Config.ai.anthropic.modelName;
+        return vision
+          ? 'claude-3-5-sonnet-20241022'
+          : Config.ai.anthropic.modelName;
       case 'OPENAI':
-        return Config.ai.openai.modelName;
-      default:
-        return 'unknown';
-    }
-  }
-
-  /**
-   * Get the appropriate vision model name based on provider
-   * @returns The vision model name
-   */
-  private getVisionModelName(): string {
-    switch (this.provider) {
-      case 'GEMINI':
-        return Config.ai.gemini.modelName.includes('vision')
-          ? Config.ai.gemini.modelName
-          : 'gemini-2.5-pro-vision';
-      case 'ANTHROPIC':
-        // All Claude 3 models support vision
-        return Config.ai.anthropic.modelName.includes('3')
-          ? Config.ai.anthropic.modelName
-          : 'claude-3-5-sonnet-20241022';
-      case 'OPENAI':
-        return Config.ai.openai.modelName.includes('vision')
-          ? Config.ai.openai.modelName
-          : 'gpt-4o';
+        return vision
+          ? 'gpt-4o'
+          : Config.ai.openai.modelName;
       default:
         return 'unknown';
     }
