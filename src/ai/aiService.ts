@@ -81,24 +81,54 @@ export class AIService {
   }
 
   /**
-   * Generate text with image analysis
-   * @param prompt The text prompt
+   * Generate a chat response from the configured AI provider
+   * @param messages Array of chat messages
+   * @param options Generation options
+   * @returns The AI response
+   */
+  async generateChatResponse(messages: ChatMessage[], options: AIOptions = {}): Promise<AIResponse> {
+    try {
+      // Get model name based on provider
+      const modelName = this.getModelName();
+      
+      // Generate chat response using adapter
+      const text = await this.adapter.generateChatResponse(messages, {
+        maxTokens: options.maxTokens,
+        temperature: options.temperature,
+        topP: options.topP,
+        topK: options.topK,
+      });
+      
+      return {
+        text,
+        model: modelName,
+        provider: this.provider,
+      };
+    } catch (error) {
+      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate text with image analysis capabilities
+   * @param prompt Text prompt
    * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
    * @param options Generation options
    * @returns The AI response
    */
   async generateTextWithImage(
-    prompt: string,
-    imageData: string,
+    prompt: string, 
+    imageData: string, 
     mimeType: string,
     options: AIOptions = {}
   ): Promise<AIResponse> {
     try {
-      // Get model name based on provider
-      const modelName = this.getModelName('vision');
+      // Get vision model name based on provider
+      const modelName = this.getVisionModelName();
       
-      // Generate text using adapter
+      // Generate text with image analysis using adapter
       const text = await this.adapter.generateTextWithImage(
         prompt,
         imageData,
@@ -123,66 +153,44 @@ export class AIService {
   }
 
   /**
-   * Generate a chat response
-   * @param messages Array of chat messages
-   * @param options Generation options
-   * @returns The AI response
+   * Get the model name for the configured provider
+   * @returns The model name
    */
-  async generateChatResponse(
-    messages: ChatMessage[],
-    options: AIOptions = {}
-  ): Promise<AIResponse> {
-    try {
-      // Get model name based on provider
-      const modelName = this.getModelName();
-      
-      // Generate text using adapter
-      const text = await this.adapter.generateChatResponse(
-        messages,
-        {
-          maxTokens: options.maxTokens,
-          temperature: options.temperature,
-          topP: options.topP,
-          topK: options.topK,
-        }
-      );
-      
-      return {
-        text,
-        model: modelName,
-        provider: this.provider,
-      };
-    } catch (error) {
-      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+  private getModelName(): string {
+    switch (this.provider) {
+      case 'GEMINI':
+        return Config.ai.gemini.modelName;
+      case 'ANTHROPIC':
+        return Config.ai.anthropic.modelName;
+      case 'OPENAI':
+        return Config.ai.openai.modelName;
+      default:
+        logger.warn(`Unknown provider: ${this.provider}, defaulting to Gemini`);
+        return Config.ai.gemini.modelName;
     }
   }
 
   /**
-   * Get the model name based on the provider
-   * @param type Type of model (optional, e.g., 'vision')
-   * @returns The model name
+   * Get the vision-capable model name for the configured provider
+   * @returns The vision-capable model name
    */
-  private getModelName(type?: string): string {
+  private getVisionModelName(): string {
     switch (this.provider) {
       case 'GEMINI':
-        if (type === 'vision') {
-          return 'gemini-2.5-pro-vision';
-        }
-        return Config.ai.gemini.modelName;
-      
+        return Config.ai.gemini.modelName.includes('vision') 
+          ? Config.ai.gemini.modelName 
+          : 'gemini-2.5-pro-vision';
       case 'ANTHROPIC':
-        // Claude 3 models support vision by default
-        return Config.ai.anthropic.modelName;
-      
+        return Config.ai.anthropic.modelName.includes('3') 
+          ? Config.ai.anthropic.modelName 
+          : 'claude-3-5-sonnet-20241022';
       case 'OPENAI':
-        if (type === 'vision') {
-          return 'gpt-4o';
-        }
-        return Config.ai.openai.modelName;
-      
+        return Config.ai.openai.modelName.includes('vision') 
+          ? Config.ai.openai.modelName 
+          : 'gpt-4o';
       default:
-        return 'unknown-model';
+        logger.warn(`Unknown provider: ${this.provider}, defaulting to Gemini Vision`);
+        return 'gemini-2.5-pro-vision';
     }
   }
 }
