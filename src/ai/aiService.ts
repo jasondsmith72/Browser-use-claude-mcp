@@ -81,30 +81,35 @@ export class AIService {
   }
 
   /**
-   * Generate text with image analysis capabilities
-   * @param prompt Text prompt
+   * Generate text with image analysis
+   * @param prompt The text prompt
    * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
    * @param options Generation options
    * @returns The AI response
    */
   async generateTextWithImage(
-    prompt: string, 
-    imageData: string, 
-    mimeType: string, 
+    prompt: string,
+    imageData: string,
+    mimeType: string,
     options: AIOptions = {}
   ): Promise<AIResponse> {
     try {
       // Get model name based on provider
-      const modelName = this.getModelName(true); // true for vision models
+      const modelName = this.getModelName('vision');
       
       // Generate text using adapter
-      const text = await this.adapter.generateTextWithImage(prompt, imageData, mimeType, {
-        maxTokens: options.maxTokens,
-        temperature: options.temperature,
-        topP: options.topP,
-        topK: options.topK,
-      });
+      const text = await this.adapter.generateTextWithImage(
+        prompt,
+        imageData,
+        mimeType,
+        {
+          maxTokens: options.maxTokens,
+          temperature: options.temperature,
+          topP: options.topP,
+          topK: options.topK,
+        }
+      );
       
       return {
         text,
@@ -119,22 +124,28 @@ export class AIService {
 
   /**
    * Generate a chat response
-   * @param messages Array of message objects with role and content
+   * @param messages Array of chat messages
    * @param options Generation options
    * @returns The AI response
    */
-  async generateChatResponse(messages: ChatMessage[], options: AIOptions = {}): Promise<AIResponse> {
+  async generateChatResponse(
+    messages: ChatMessage[],
+    options: AIOptions = {}
+  ): Promise<AIResponse> {
     try {
       // Get model name based on provider
       const modelName = this.getModelName();
       
-      // Generate response using adapter
-      const text = await this.adapter.generateChatResponse(messages, {
-        maxTokens: options.maxTokens,
-        temperature: options.temperature,
-        topP: options.topP,
-        topK: options.topK,
-      });
+      // Generate text using adapter
+      const text = await this.adapter.generateChatResponse(
+        messages,
+        {
+          maxTokens: options.maxTokens,
+          temperature: options.temperature,
+          topP: options.topP,
+          topK: options.topK,
+        }
+      );
       
       return {
         text,
@@ -148,32 +159,30 @@ export class AIService {
   }
 
   /**
-   * Get the model name based on the configured provider
-   * @param isVision Whether to get a vision-capable model
+   * Get the model name based on the provider
+   * @param type Type of model (optional, e.g., 'vision')
    * @returns The model name
    */
-  private getModelName(isVision: boolean = false): string {
+  private getModelName(type?: string): string {
     switch (this.provider) {
       case 'GEMINI':
-        return isVision 
-          ? Config.ai.gemini.modelName.includes('vision') 
-              ? Config.ai.gemini.modelName 
-              : 'gemini-2.5-pro-vision'
-          : Config.ai.gemini.modelName;
+        if (type === 'vision') {
+          return 'gemini-2.5-pro-vision';
+        }
+        return Config.ai.gemini.modelName;
+      
       case 'ANTHROPIC':
-        return isVision 
-          ? Config.ai.anthropic.modelName.includes('3') 
-              ? Config.ai.anthropic.modelName 
-              : 'claude-3-5-sonnet-20241022'
-          : Config.ai.anthropic.modelName;
+        // Claude 3 models support vision by default
+        return Config.ai.anthropic.modelName;
+      
       case 'OPENAI':
-        return isVision 
-          ? Config.ai.openai.modelName.includes('vision') 
-              ? Config.ai.openai.modelName 
-              : 'gpt-4o'
-          : Config.ai.openai.modelName;
+        if (type === 'vision') {
+          return 'gpt-4o';
+        }
+        return Config.ai.openai.modelName;
+      
       default:
-        return 'unknown';
+        return 'unknown-model';
     }
   }
 }
