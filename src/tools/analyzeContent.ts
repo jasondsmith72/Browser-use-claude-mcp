@@ -1,8 +1,8 @@
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { BrowserManager } from '../browser/browserManager.js';
+import { AIService } from '../ai/aiService.js';
 import { z } from 'zod';
 import { setupLogger, createContextLogger } from '../utils/logger.js';
-import { AIService } from '../ai/aiService.js';
 
 // Logger
 const logger = createContextLogger(setupLogger(), 'AnalyzeContentTool');
@@ -11,10 +11,10 @@ const logger = createContextLogger(setupLogger(), 'AnalyzeContentTool');
  * Input schema for analyze content tool
  */
 const AnalyzeContentInputSchema = z.object({
-  question: z.string(),
+  instructions: z.string(),
+  url: z.string().url().optional(),
+  selector: z.string().optional(),
   takeScreenshot: z.boolean().default(false).optional(),
-  maxTokens: z.number().min(100).max(32000).default(4096).optional(),
-  temperature: z.number().min(0).max(1).default(0.7).optional(),
   sessionId: z.string().optional(),
 });
 
@@ -27,9 +27,10 @@ type AnalyzeContentInput = z.infer<typeof AnalyzeContentInputSchema>;
  * Output schema for analyze content tool
  */
 const AnalyzeContentOutputSchema = z.object({
-  answer: z.string(),
-  model: z.string(),
-  provider: z.string(),
+  url: z.string(),
+  title: z.string(),
+  analysis: z.string(),
+  extractedText: z.string().optional(),
   sessionId: z.string(),
 });
 
@@ -51,108 +52,104 @@ export function registerAnalyzeContentTool(
   
   server.registerToolDefinition({
     name: 'analyze_content',
-    description: 'Analyze webpage content with AI to answer specific questions',
+    description: 'Analyze webpage content using AI',
     parameters: AnalyzeContentInputSchema,
   });
   
   server.registerToolImplementation({
     name: 'analyze_content',
     handler: async (params: AnalyzeContentInput): Promise<AnalyzeContentOutput> => {
-      logger.info(`Analyzing content with question: ${params.question}`);
+      logger.info('Analyzing content with AI');
       
       try {
         // Get page from browser manager
         const { page, sessionId } = await browserManager.getPage(params.sessionId);
         
-        // Get current page info
+        // Navigate to URL if provided
+        if (params.url) {
+          await page.goto(params.url, {
+            waitUntil: 'networkidle2',
+            timeout: 30000,
+          });
+        }
+        
+        // Get page info
         const url = page.url();
         const title = await page.title();
         
-        // Extract content from the page
-        const content = await page.evaluate(() => {
-          // Main content selectors to try
-          const mainSelectors = [
-            'main',
-            'article',
-            '#main',
-            '#content',
-            '.main',
-            '.content',
-            '.article',
-          ];
-          
-          // Try to find main content
-          for (const selector of mainSelectors) {
+        // Extract text content
+        let extractedText = '';
+        if (params.selector) {
+          // Extract from specific selector
+          extractedText = await page.evaluate((selector) => {
             const element = document.querySelector(selector);
-            if (element && element.textContent && element.textContent.trim().length > 500) {
-              return element.textContent.trim();
-            }
-          }
-          
-          // Fallback to body content
-          const bodyText = document.body.textContent || '';
-          return bodyText.trim();
-        });
+            return element ? element.textContent || '' : '';
+          }, params.selector);
+        } else {
+          // Extract from entire page
+          extractedText = await page.evaluate(() => {
+            return document.body.innerText || '';
+          });
+        }
+        
+        // Truncate text if too long (to avoid token limits)
+        const maxLength = 15000;
+        if (extractedText.length > maxLength) {
+          extractedText = extractedText.substring(0, maxLength) + '... [content truncated]';
+        }
         
         // Take screenshot if requested
-        let screenshotBase64 = '';
+        let imageData = '';
         let mimeType = '';
         
         if (params.takeScreenshot) {
-          const screenshot = await page.screenshot({ type: 'jpeg', quality: 80 });
-          screenshotBase64 = screenshot.toString('base64');
+          const screenshotBuffer = await page.screenshot({
+            type: 'jpeg',
+            quality: 80,
+            fullPage: false,
+          });
+          
+          imageData = screenshotBuffer.toString('base64');
           mimeType = 'image/jpeg';
         }
         
-        // Initialize AI service
+        // Prepare AI service
         const aiService = new AIService();
         
-        // Create prompt for AI
-        const prompt = `I am examining a webpage with the following information:
+        // Prepare prompt for AI analysis
+        const prompt = `
+You are tasked with analyzing content from a webpage. Below are the details:
+
 URL: ${url}
 Title: ${title}
+User Instructions: ${params.instructions}
 
-The content of the page is as follows:
+Here is the extracted content to analyze:
 ---
-${content.substring(0, 15000)} ${content.length > 15000 ? '... (content truncated)' : ''}
+${extractedText}
 ---
 
-Based on this webpage content, please answer the following question:
-${params.question}
+Based on the user's instructions, please analyze this content. If the instructions are unclear, focus on the main points, key information, sentiment, and any relevant insights.
 
-Please be specific and only include information that is directly relevant to the question. If the answer cannot be found in the webpage content, please indicate that.`;
+Provide a concise and structured analysis.
+`;
         
-        // Generate response using AI
+        // Generate analysis with or without image
         let aiResponse;
-        
-        if (params.takeScreenshot && screenshotBase64) {
-          // Generate response with image if screenshot was taken
-          aiResponse = await aiService.generateTextWithImage(
-            prompt,
-            screenshotBase64,
-            mimeType,
-            {
-              maxTokens: params.maxTokens,
-              temperature: params.temperature,
-            }
-          );
+        if (params.takeScreenshot && imageData) {
+          aiResponse = await aiService.generateTextWithImage(prompt, imageData, mimeType);
         } else {
-          // Generate text-only response
-          aiResponse = await aiService.generateText(
-            prompt,
-            {
-              maxTokens: params.maxTokens,
-              temperature: params.temperature,
-            }
-          );
+          aiResponse = await aiService.generateText(prompt);
         }
         
+        // Return analysis
         logger.info('Successfully analyzed content');
         
         return {
-          answer: aiResponse.text,
-          model: aiResponse.model,
-          provider: aiResponse.provider,
+          url,
+          title,
+          analysis: aiResponse.text,
+          extractedText,
           sessionId,
         };
       } catch (error) {
