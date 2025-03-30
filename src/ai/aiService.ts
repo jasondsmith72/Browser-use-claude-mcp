@@ -81,37 +81,7 @@ export class AIService {
   }
 
   /**
-   * Generate a chat response
-   * @param messages Array of chat messages
-   * @param options Generation options
-   * @returns The AI response
-   */
-  async generateChatResponse(messages: ChatMessage[], options: AIOptions = {}): Promise<AIResponse> {
-    try {
-      // Get model name based on provider
-      const modelName = this.getModelName();
-      
-      // Generate chat response using adapter
-      const text = await this.adapter.generateChatResponse(messages, {
-        maxTokens: options.maxTokens,
-        temperature: options.temperature,
-        topP: options.topP,
-        topK: options.topK,
-      });
-      
-      return {
-        text,
-        model: modelName,
-        provider: this.provider,
-      };
-    } catch (error) {
-      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Generate text with image analysis capabilities
+   * Generate text with image analysis
    * @param prompt Text prompt
    * @param imageData Base64 encoded image data
    * @param mimeType Image MIME type
@@ -125,8 +95,8 @@ export class AIService {
     options: AIOptions = {}
   ): Promise<AIResponse> {
     try {
-      // Get model name based on provider
-      const modelName = this.getModelName(true);
+      // Get vision-capable model
+      const modelName = this.getVisionModelName();
       
       // Generate text with image using adapter
       const text = await this.adapter.generateTextWithImage(
@@ -153,24 +123,76 @@ export class AIService {
   }
 
   /**
-   * Get the appropriate model name based on provider
-   * @param vision Whether to use a vision-capable model
+   * Generate a chat response
+   * @param messages Array of chat messages
+   * @param options Generation options
+   * @returns The AI response
+   */
+  async generateChatResponse(
+    messages: ChatMessage[],
+    options: AIOptions = {}
+  ): Promise<AIResponse> {
+    try {
+      // Get model name
+      const modelName = this.getModelName();
+      
+      // Generate chat response using adapter
+      const text = await this.adapter.generateChatResponse(
+        messages,
+        {
+          maxTokens: options.maxTokens,
+          temperature: options.temperature,
+          topP: options.topP,
+          topK: options.topK,
+        }
+      );
+      
+      return {
+        text,
+        model: modelName,
+        provider: this.provider,
+      };
+    } catch (error) {
+      logger.error(`Error generating chat response: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get the model name for the configured provider
    * @returns The model name
    */
-  private getModelName(vision: boolean = false): string {
+  private getModelName(): string {
     switch (this.provider) {
       case 'GEMINI':
-        return vision
-          ? 'gemini-2.5-pro-vision'
-          : Config.ai.gemini.modelName;
+        return Config.ai.gemini.modelName;
       case 'ANTHROPIC':
-        return vision
-          ? 'claude-3-5-sonnet-20241022'
-          : Config.ai.anthropic.modelName;
+        return Config.ai.anthropic.modelName;
       case 'OPENAI':
-        return vision
-          ? 'gpt-4o'
-          : Config.ai.openai.modelName;
+        return Config.ai.openai.modelName;
+      default:
+        return 'unknown';
+    }
+  }
+
+  /**
+   * Get the vision-capable model name for the configured provider
+   * @returns The vision-capable model name
+   */
+  private getVisionModelName(): string {
+    switch (this.provider) {
+      case 'GEMINI':
+        return Config.ai.gemini.modelName.includes('vision')
+          ? Config.ai.gemini.modelName
+          : 'gemini-2.5-pro-vision';
+      case 'ANTHROPIC':
+        return Config.ai.anthropic.modelName.includes('3')
+          ? Config.ai.anthropic.modelName
+          : 'claude-3-5-sonnet-20241022';
+      case 'OPENAI':
+        return Config.ai.openai.modelName.includes('vision')
+          ? Config.ai.openai.modelName
+          : 'gpt-4o';
       default:
         return 'unknown';
     }
